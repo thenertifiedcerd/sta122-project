@@ -1,0 +1,309 @@
+data = cleaned_sta122_pointerless
+
+# 1. Structure of data
+str(data)
+dim(data)
+names(data)
+
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(car)
+
+# Preview dataset
+head(data)
+
+# ====GROUP 1=====
+
+# Summary of UTME & PUTME
+summary(data$`UTME score`)
+sd(data$`UTME score`, na.rm = TRUE)
+summary(data$`PUTME score`)
+sd(data$`PUTME score`, na.rm = TRUE)
+
+# Summary table: mean and standard deviation by Department
+summary_stats <- data %>%
+  group_by(Department) %>%
+  summarise(
+    UTME_mean   = mean(`UTME score`, na.rm = TRUE),
+    UTME_median = median(`UTME score`, na.rm = TRUE),
+    UTME_sd     = sd(`UTME score`, na.rm = TRUE),
+    PUTME_mean   = mean(`PUTME score`, na.rm = TRUE),
+    PUTME_median = median(`PUTME score`, na.rm = TRUE),
+    PUTME_sd     = sd(`PUTME score`, na.rm = TRUE)
+  )
+
+print(summary_stats)
+
+# UTME Histogram
+ggplot(data, aes(x = `UTME score`)) +
+  geom_histogram(binwidth = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of UTME Scores", x = "UTME Score", y = "Count") +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+
+# PUTME Histogram
+ggplot(data, aes(x = `PUTME score`)) +
+  geom_histogram(binwidth = 5, fill = "darkgreen", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of PUTME Scores", x = "PUTME Score", y = "Count") +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+
+# Pearson correlation
+cor.test(data$`UTME score`, data$`PUTME score`, method = "pearson")
+
+# Scatterplot UTME vs PUTME
+ggplot(data, aes(x = `UTME score`, y = `PUTME score`)) +
+  geom_point(color = "blue", alpha = 0.9, size = 3) +   # scatter points
+  geom_smooth(method = "lm", color = "red", fill = "null", se = FALSE, lwd = 1.2) +  # regression line + CI
+  labs(
+    title = "Relationship between UTME and PUTME Scores",
+    subtitle = "Higher UTME scores are associated with higher PUTME scores",
+    x = "UTME Score",
+    y = "PUTME Score"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+# ANOVA: Does department affect UTME?
+anova_utme <- aov(`UTME score` ~ Department, data = data)
+summary(anova_utme)
+
+# ANOVA: Does department affect PUTME?
+anova_putme <- aov(`PUTME score` ~ Department, data = data)
+summary(anova_putme)
+
+# Boxplots
+ggplot(data, aes(x = Department, y = `UTME score`, fill = Department)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.shape = 16, outlier.size = 2) +
+  labs(title = "UTME Scores by Department", x = "Department", y = "UTME Score") +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    legend.position = "none" # removes duplicate legend
+  )
+
+# PUTME Scores by Department
+ggplot(data, aes(x = Department, y = `PUTME score`, fill = Department)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.shape = 16, outlier.size = 2) +
+  labs(title = "PUTME Scores by Department", x = "Department", y = "PUTME Score") +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    legend.position = "none"
+  )
+
+
+# ================================
+# GROUP 2: O’level Type vs UTME, PUTME & Admission
+# ================================
+
+data <- cleaned_sta122_pointerless %>%
+  rename(
+    utme = `UTME score`,
+    putme = `PUTME score`,
+    dept = Department,
+    olevel_type = `O'level type`,
+  )
+
+# Make as factors
+data <- data %>%
+  mutate(
+    olevel_type = factor(olevel_type),
+  )
+
+# ======== 1) Distribution of O'level type (for slides) ========
+ggplot(data, aes(x = olevel_type)) +
+  geom_bar(fill = "skyblue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of O'level Types", x = "O'level Type", y = "Count") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+# ======== 2) UTME & PUTME by O'level type (EDA) ========
+ggplot(data, aes(x = olevel_type, y = utme, fill = olevel_type)) +
+  geom_boxplot(alpha = 0.75, outlier.shape = 16) +
+  labs(title = "UTME by O'level Type", x = "O'level Type", y = "UTME") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30, hjust = 1))
+
+ggplot(data, aes(x = olevel_type, y = putme, fill = olevel_type)) +
+  geom_boxplot(alpha = 0.75, outlier.shape = 16) +
+  labs(title = "PUTME by O'level Type", x = "O'level Type", y = "PUTME") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 30, hjust = 1))
+
+# ======== 3) Significance tests: O'level type ========
+# UTME ~ O'level type (ANOVA)
+aov_utme_type <- aov(utme ~ olevel_type, data = data)
+summary(aov_utme_type)
+
+# PUTME ~ O'level type (ANOVA)
+aov_putme_type <- aov(putme ~ olevel_type, data = data)
+summary(aov_putme_type)
+
+# ======== 5) Nice summary tables (for slide captions) ========
+type_summary <- data %>%
+  group_by(olevel_type) %>%
+  summarise(n = n(),
+            utme_mean = mean(utme, na.rm = TRUE),
+            utme_sd   = sd(utme, na.rm = TRUE),
+            putme_mean= mean(putme, na.rm = TRUE),
+            putme_sd  = sd(putme, na.rm = TRUE)) %>%
+  arrange(desc(n))
+print(type_summary)
+
+# ================================
+# GROUP 3: FAMILY STATUS AND EXAM PERFORMANCE
+# ================================
+
+# Rename for convenience
+data <- data %>%
+  rename(
+    family_size = `Family size`,
+    position = `Your position in the family ladder`   # may contain empty entry
+  )
+
+# Replace empty strings "" with NA
+data$position[data$position == "" | data$position == " "] <- NA
+
+# Remove unrealistic values
+data$family_size[data$family_size == 1] <- NA
+data$family_size[data$family_size == 2] <- NA
+
+
+# Convert to factor
+data$position <- factor(data$position)
+
+# ======== 1) Distribution of Family Size ========
+ggplot(na.omit(data), aes(x = family_size)) +
+  geom_bar(fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Family Size", x = "Family Size", y = "Count") +
+  theme_minimal(base_size = 14)
+
+# Distribution of Position (excluding missing)
+ggplot(na.omit(data), aes(x = position)) +
+  geom_bar(fill = "orange", color = "black") +
+  labs(title = "Distribution of Family Position", x = "Position in Family", y = "Count") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+# ======== 2) UTME & PUTME by Family Size ========
+ggplot(na.omit(data), aes(x = factor(family_size), y = utme, fill = factor(family_size))) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "UTME by Family Size", x = "Family Size", y = "UTME Score") +
+  theme_minimal(base_size = 14)
+
+ggplot(na.omit(data), aes(x = factor(family_size), y = putme, fill = factor(family_size))) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "PUTME by Family Size", x = "Family Size", y = "PUTME Score") +
+  theme_minimal(base_size = 14)
+
+# ======== 3) UTME & PUTME by Position (exclude missing) ========
+ggplot(na.omit(data), aes(x = position, y = utme, fill = position)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "UTME by Family Position", x = "Position in Family", y = "UTME Score") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+ggplot(na.omit(data), aes(x = position, y = putme, fill = position)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "PUTME by Family Position", x = "Position in Family", y = "PUTME Score") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+# ======== 4) Significance Tests (exclude missing) ========
+aov_utme_size <- aov(utme ~ factor(family_size), data = na.omit(data))
+summary(aov_utme_size)
+
+aov_putme_size <- aov(putme ~ factor(family_size), data = na.omit(data))
+summary(aov_putme_size)
+
+aov_utme_pos <- aov(utme ~ position, data = na.omit(data))
+summary(aov_utme_pos)
+
+aov_putme_pos <- aov(putme ~ position, data = na.omit(data))
+summary(aov_putme_pos)
+
+# ======== 5) Summary Stats ========
+family_summary <- data %>%
+  group_by(family_size) %>%
+  summarise(
+    n = n(),
+    utme_mean = mean(utme, na.rm = TRUE),
+    putme_mean = mean(putme, na.rm = TRUE)
+  )
+
+position_summary <- data %>%
+  filter(!is.na(position)) %>%
+  group_by(position) %>%
+  summarise(
+    n = n(),
+    utme_mean = mean(utme, na.rm = TRUE),
+    putme_mean = mean(putme, na.rm = TRUE)
+  )
+
+print(position_summary)
+
+# ================================
+# GROUP 4: TYPE OF SCHOOL AND EXAM PERFORMANCE
+# ================================
+
+
+# Rename for convenience
+data <- cleaned_sta122_pointerless %>%
+  rename(
+    school_type = `Type of School attended`,
+    utme = `UTME score`,
+    putme = `PUTME score`,
+    olevel_type = `O'level type`
+  ) %>%
+  mutate(
+    school_type = factor(school_type),
+    olevel_type = factor(olevel_type)
+  )
+
+# ===== 1) Distribution of School Types =====
+ggplot(data, aes(x = school_type)) +
+  geom_bar(fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Students by School Type", x = "School Type", y = "Count") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+# ===== 2) UTME & PUTME by School Type =====
+ggplot(data, aes(x = school_type, y = utme, fill = school_type)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "UTME by School Type", x = "School Type", y = "UTME Score") +
+  theme_minimal(base_size = 14) + theme(legend.position = "none")
+
+ggplot(data, aes(x = school_type, y = putme, fill = school_type)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "PUTME by School Type", x = "School Type", y = "PUTME Score") +
+  theme_minimal(base_size = 14) + theme(legend.position = "none")
+
+# ===== 3) ANOVA =====
+aov_utme_school <- aov(utme ~ school_type, data = data)
+summary(aov_utme_school)
+
+aov_putme_school <- aov(putme ~ school_type, data = data)
+summary(aov_putme_school)
+
+
+# ===== 4) Summary Table =====
+school_summary <- data %>%
+  group_by(school_type) %>%
+  summarise(
+    n = n(),
+    utme_mean = mean(utme, na.rm = TRUE),
+    utme_sd   = sd(utme, na.rm = TRUE),
+    putme_mean = mean(putme, na.rm = TRUE),
+    putme_sd   = sd(putme, na.rm = TRUE)
+  )
+print(school_summary)
+
